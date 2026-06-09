@@ -52,11 +52,7 @@ const AdminDashboard = () => {
     return '#f59e0b'; // Orange
   };
 
-  const exportToExcel = (classId, className) => {
-    const classStudents = students.filter(s => parseInt(s.class) === classId);
-    const males = classStudents.filter(s => s.gender === 'male').sort((a, b) => b.grade - a.grade);
-    const females = classStudents.filter(s => s.gender === 'female').sort((a, b) => b.grade - a.grade);
-
+  const exportToExcel = (data, fileName, sheetName, classId) => {
     const formatData = (list) => list.map((s, index) => {
       const row = {
         'الترتيب': index + 1,
@@ -66,27 +62,97 @@ const AdminDashboard = () => {
         'الدرجة': s.grade
       };
       if (classId === 12) {
-        row['درجة القدرات'] = s.qudrat_score || '-';
-        row['درجة التحصيلي'] = s.tahsili_score || '-';
+        row['درجة القدرات'] = s.qiyes_grade || '-';
+        row['درجة التحصيلي'] = s.SAAT_grade || '-';
       }
+      row['رقم الجوال 1'] = s.phone1 || '-';
+      row['رقم الجوال 2'] = s.phone2 || '-';
       return row;
     });
 
     const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(formatData(data));
+    ws['!dir'] = 'rtl';
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.writeFile(wb, `${fileName}.xlsx`);
+  };
 
-    if (males.length > 0) {
-      const maleWs = XLSX.utils.json_to_sheet(formatData(males));
-      maleWs['!dir'] = 'rtl';
-      XLSX.utils.book_append_sheet(wb, maleWs, 'الذكور');
-    }
+  const renderStudentTable = (title, list, classId, genderLabel) => {
+    if (list.length === 0) return null;
 
-    if (females.length > 0) {
-      const femaleWs = XLSX.utils.json_to_sheet(formatData(females));
-      femaleWs['!dir'] = 'rtl';
-      XLSX.utils.book_append_sheet(wb, femaleWs, 'الإناث');
-    }
+    const className = CLASSES.find(c => c.id === classId)?.name || '';
+    const exportFileName = `${genderLabel}_${className.replace(/\s+/g, '_')}`;
 
-    XLSX.writeFile(wb, `${className}_students.xlsx`);
+    return (
+      <div className="gender-table-container">
+        <div className="table-header">
+          <h3 className="gender-table-title">{title}</h3>
+          <button
+            onClick={() => exportToExcel(list, exportFileName, genderLabel, classId)}
+            className="export-btn btn-primary"
+          >
+            تصدير Excel 📥
+          </button>
+        </div>
+        <div className="table-responsive">
+          <table className="student-table">
+            <thead>
+              <tr>
+                <th>الترتيب</th>
+                <th>الاسم الكامل</th>
+                <th>المدرسة</th>
+                <th>المنطقة</th>
+                <th>الدرجة</th>
+                {classId === 12 && (
+                  <>
+                    <th>القدرات</th>
+                    <th>التحصيلي</th>
+                  </>
+                )}
+                <th>رقم الجوال 1</th>
+                <th>رقم الجوال 2</th>
+                <th>المستوى</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((s, index) => (
+                <tr key={s.id}>
+                  <td>
+                    {index === 0 && '🥇'}
+                    {index === 1 && '🥈'}
+                    {index === 2 && '🥉'}
+                    {index > 2 && index + 1}
+                  </td>
+                  <td>{`${s.first_name} ${s.second_name} ${s.third_name} ${s.last_name}`}</td>
+                  <td>{s.school_name}</td>
+                  <td>{GOVERNORATES[s.governorate] || s.governorate}</td>
+                  <td>{s.grade}%</td>
+                  {classId === 12 && (
+                    <>
+                      <td>{s.qiyes_grade || '-'}</td>
+                      <td>{s.SAAT_grade || '-'}</td>
+                    </>
+                  )}
+                  <td>{s.phone1 || '-'}</td>
+                  <td>{s.phone2 || '-'}</td>
+                  <td>
+                    <div className="progress-bar-bg">
+                      <div
+                        className="progress-bar-fill"
+                        style={{
+                          width: `${s.grade}%`,
+                          backgroundColor: getGradeColor(s.grade)
+                        }}
+                      ></div>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
   };
 
   if (loading) return <div className="loading-spinner"><div className="spinner"></div></div>;
@@ -121,9 +187,9 @@ const AdminDashboard = () => {
       </div>
 
       {CLASSES.map(cls => {
-        const classStudents = students
-          .filter(s => parseInt(s.class) === cls.id)
-          .sort((a, b) => b.grade - a.grade);
+        const classStudents = students.filter(s => parseInt(s.class) === cls.id);
+        const males = classStudents.filter(s => s.gender === 'male').sort((a, b) => b.grade - a.grade);
+        const females = classStudents.filter(s => s.gender === 'female').sort((a, b) => b.grade - a.grade);
 
         if (classStudents.length === 0) return null;
 
@@ -131,67 +197,10 @@ const AdminDashboard = () => {
           <div key={cls.id} className="class-section card">
             <div className="section-header">
               <h2>{cls.name}</h2>
-              <button
-                onClick={() => exportToExcel(cls.id, cls.name)}
-                className="export-btn btn-primary"
-              >
-                تصدير Excel 📥
-              </button>
             </div>
 
-            <div className="table-responsive">
-              <table className="student-table">
-                <thead>
-                  <tr>
-                    <th>الترتيب</th>
-                    <th>الاسم الكامل</th>
-                    <th>المدرسة</th>
-                    <th>المنطقة</th>
-                    <th>الدرجة</th>
-                    {cls.id === 12 && (
-                      <>
-                        <th>القدرات</th>
-                        <th>التحصيلي</th>
-                      </>
-                    )}
-                    <th>المستوى</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {classStudents.map((s, index) => (
-                    <tr key={s.id}>
-                      <td>
-                        {index === 0 && '🥇'}
-                        {index === 1 && '🥈'}
-                        {index === 2 && '🥉'}
-                        {index > 2 && index + 1}
-                      </td>
-                      <td>{`${s.first_name} ${s.second_name} ${s.third_name} ${s.last_name}`}</td>
-                      <td>{s.school_name}</td>
-                      <td>{GOVERNORATES[s.governorate] || s.governorate}</td>
-                      <td>{s.grade}%</td>
-                      {cls.id === 12 && (
-                        <>
-                          <td>{s.qudrat_score || '-'}</td>
-                          <td>{s.tahsili_score || '-'}</td>
-                        </>
-                      )}
-                      <td>
-                        <div className="progress-bar-bg">
-                          <div
-                            className="progress-bar-fill"
-                            style={{
-                              width: `${s.grade}%`,
-                              backgroundColor: getGradeColor(s.grade)
-                            }}
-                          ></div>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {renderStudentTable(`طلاب ${cls.name}`, males, cls.id, 'طلاب')}
+            {renderStudentTable(`طالبات ${cls.name}`, females, cls.id, 'طالبات')}
           </div>
         );
       })}

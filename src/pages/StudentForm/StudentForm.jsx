@@ -20,7 +20,7 @@ const StudentForm = () => {
   const [formData, setFormData] = useState({
     first_name: '', second_name: '', third_name: '', last_name: '',
     gender: 'male', governorate: '', class: '', school_name: '',
-    grade: '', qudrat_score: '', tahsili_score: '',
+    grade: '', qiyes_grade: '', SAAT_grade: '',
     phone1: '', phone2: '', address: ''
   });
   const [certImage, setCertImage] = useState(null);
@@ -53,7 +53,7 @@ const StudentForm = () => {
     Object.keys(formData).forEach(key => {
       if (formData[key]) submissionData.append(key, formData[key]);
     });
-    
+
     if (certImage) submissionData.append('cert_image', certImage);
     additionalImages.forEach((img, i) => {
       if (img) submissionData.append(`additional_images[${i}]`, img);
@@ -65,7 +65,7 @@ const StudentForm = () => {
       setFormData({
         first_name: '', second_name: '', third_name: '', last_name: '',
         gender: 'male', governorate: '', class: '', school_name: '',
-        grade: '', qudrat_score: '', tahsili_score: '',
+        grade: '', qiyes_grade: '', SAAT_grade: '',
         phone1: '', phone2: '', address: ''
       });
       setCertImage(null);
@@ -83,7 +83,7 @@ const StudentForm = () => {
       <div className="form-card card">
         <h2 className="form-title">تسجيل بيانات الطالب</h2>
         {message.text && <div className={`alert ${message.type}`}>{message.text}</div>}
-        
+
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
             <div className="form-group">
@@ -141,11 +141,11 @@ const StudentForm = () => {
               <>
                 <div className="form-group">
                   <label>درجة القدرات</label>
-                  <input type="number" name="qudrat_score" value={formData.qudrat_score} onChange={handleChange} />
+                  <input type="number" name="qiyes_grade" value={formData.qiyes_grade} onChange={handleChange} />
                 </div>
                 <div className="form-group">
                   <label>درجة التحصيلي</label>
-                  <input type="number" name="tahsili_score" value={formData.tahsili_score} onChange={handleChange} />
+                  <input type="number" name="SAAT_grade" value={formData.SAAT_grade} onChange={handleChange} />
                 </div>
               </>
             )}
