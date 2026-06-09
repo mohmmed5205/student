@@ -19,8 +19,10 @@ const AdminLogin = ({ onLogin }) => {
 
     try {
       const data = await loginAdmin(credentials.email, credentials.password);
-      if (data.data?.token) { // ✅ صح
-        onLogin(data.data.token);
+      if (data.access_token) {
+        onLogin(data.access_token);
+      } else {
+        throw new Error('لم يتم استلام توكن الدخول');
       }
     } catch (err) {
       setError(err.message || 'فشل تسجيل الدخول. يرجى التحقق من البيانات.');
@@ -37,13 +39,13 @@ const AdminLogin = ({ onLogin }) => {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>البريد الإلكتروني</label>
+            <label>اسم المستخدم</label>
             <input
               type="text"
               name="email"
               value={credentials.email}
               onChange={handleChange}
-              placeholder="user name"
+              placeholder="اسم المستخدم"
               required
             />
           </div>

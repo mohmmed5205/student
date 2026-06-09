@@ -1,4 +1,4 @@
-const BASE_URL = 'https://studentshonoringsystem-1.onrender.com/api/';
+const BASE_URL = '/api/';
 
 const getHeaders = () => {
   const token = localStorage.getItem('admin_token');
@@ -18,7 +18,7 @@ export const loginAdmin = async (email, password) => {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ username: email, password }),
   });
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -55,7 +55,7 @@ export const getStudent = async (id) => {
 export const addStudent = async (formData) => {
   const response = await fetch(`${BASE_URL}admin/students`, {
     method: 'POST',
-    headers: getHeaders(), // Should not have Content-Type for FormData
+    headers: getHeaders(),
     body: formData,
   });
   if (!response.ok) throw new Error('فشل إضافة الطالب');
