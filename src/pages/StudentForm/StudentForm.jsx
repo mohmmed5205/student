@@ -99,8 +99,13 @@ const StudentForm = () => {
               <input type="text" name="third_name" value={formData.third_name} onChange={handleChange} required />
             </div>
             <div className="form-group">
-              <label>اللقب (العائلة)*</label>
+              <label>اللقب *</label>
               <input type="text" name="last_name" value={formData.last_name} onChange={handleChange} required />
+            </div>
+            <div className="form-group">
+              <label> العائله*</label>
+              <input type='text ' name='famele_name' pattern='باكرمان' readOnly value='باكرمان'></input>
+
             </div>
           </div>
 
