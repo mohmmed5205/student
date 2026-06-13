@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { getStudents } from '../../services/api';
 import './AdminDashboard.css';
 
@@ -16,10 +17,13 @@ const GOVERNORATES = {
   9: 'الحدود الشمالية', 10: 'جازان', 11: 'نجران', 12: 'الباحة'
 };
 
+const IMAGE_BASE_URL = 'https://vpkxfiywlhsdowqosuqi.supabase.co/storage/v1/object/public/certificates/';
+
 const AdminDashboard = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -47,52 +51,163 @@ const AdminDashboard = () => {
 
   const getGradeColor = (grade) => {
     const g = parseFloat(grade);
-    if (g >= 90) return '#10b981'; // Green
-    if (g >= 75) return '#8b5cf6'; // Purple
-    return '#f59e0b'; // Orange
+    if (g >= 90) return '#10b981';
+    if (g >= 75) return '#8b5cf6';
+    return '#f59e0b';
   };
 
-  const exportToExcel = (data, fileName, sheetName, classId) => {
-    const formatData = (list) => list.map((s, index) => {
-      const row = {
-        'الترتيب': index + 1,
-        'الاسم الكامل': `${s.first_name} ${s.second_name} ${s.third_name} ${s.last_name}`,
-        'المدرسة': s.school_name,
-        'المنطقة': GOVERNORATES[s.governorate] || s.governorate,
-        'الدرجة': s.grade
-      };
-      if (classId === 12) {
-        row['درجة القدرات'] = s.qiyes_grade || '-';
-        row['درجة التحصيلي'] = s.SAAT_grade || '-';
+  const fetchImageBuffer = async (filename) => {
+    if (!filename) return null;
+    try {
+      const fullUrl = filename.startsWith('http') ? filename : `${IMAGE_BASE_URL}${filename}`;
+      const response = await fetch(fullUrl);
+      if (!response.ok) throw new Error('failed');
+      return await response.arrayBuffer();
+    } catch {
+      return null;
+    }
+  };
+
+  const exportToExcel = async (males, females, className, classId) => {
+    setExporting(true);
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const sections = [
+        { name: 'طلاب', data: males },
+        { name: 'طالبات', data: females }
+      ];
+
+      for (const section of sections) {
+        if (section.data.length === 0) continue;
+        const worksheet = workbook.addWorksheet(section.name);
+        worksheet.views = [{ rightToLeft: true }];
+
+        const columns = [
+          { header: 'الترتيب', key: 'index', width: 10 },
+          { header: 'الاسم الكامل', key: 'fullName', width: 30 },
+          { header: 'المدرسة', key: 'school', width: 25 },
+          { header: 'المنطقة', key: 'region', width: 20 },
+          { header: 'الدرجة', key: 'grade', width: 15 },
+        ];
+
+        if (classId === 12) {
+          columns.push({ header: 'درجة القدرات', key: 'qiyes_grade', width: 15 });
+          columns.push({ header: 'درجة التحصيلي', key: 'SAAT_grade', width: 15 });
+        }
+
+        columns.push({ header: 'رقم الجوال 1', key: 'phone1', width: 20 });
+        columns.push({ header: 'رقم الجوال 2', key: 'phone2', width: 20 });
+        columns.push({ header: 'صورة الشهادة', key: 'cert_img', width: 25 });
+
+        if (classId === 12) {
+          columns.push({ header: 'شهادة القدرات', key: 'qiyes_cert_img', width: 25 });
+          columns.push({ header: 'شهادة التحصيلي', key: 'SAAT_cert_img', width: 25 });
+        }
+
+        worksheet.columns = columns;
+
+        worksheet.getRow(1).eachCell(cell => {
+          cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6366F1' } };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+        worksheet.getRow(1).height = 30;
+
+        for (let i = 0; i < section.data.length; i++) {
+          const s = section.data[i];
+
+          const rowData = {
+            index: i + 1,
+            fullName: `${s.first_name} ${s.second_name} ${s.third_name} ${s.last_name}`,
+            school: s.school_name,
+            region: GOVERNORATES[s.governorate] || s.governorate,
+            grade: s.grade,
+            phone1: s.phone1 || '-',
+            phone2: s.phone2 || '-',
+          };
+
+          if (classId === 12) {
+            rowData.qiyes_grade = s.qiyes_grade || '-';
+            rowData.SAAT_grade = s.SAAT_grade || '-';
+          }
+
+          const row = worksheet.addRow(rowData);
+          row.height = 90;
+          row.eachCell(cell => {
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          });
+
+          // صورة الشهادة
+          const certColIndex = columns.findIndex(c => c.key === 'cert_img') + 1;
+          if (s.cert_image) {
+            const buffer = await fetchImageBuffer(s.cert_image);
+            if (buffer) {
+              const imageId = workbook.addImage({ buffer, extension: 'jpeg' });
+              worksheet.addImage(imageId, {
+                tl: { col: certColIndex - 1, row: row.number - 1 },
+                ext: { width: 120, height: 85 }
+              });
+            } else {
+              worksheet.getCell(row.number, certColIndex).value = 'لا توجد صورة';
+            }
+          } else {
+            worksheet.getCell(row.number, certColIndex).value = 'لا توجد صورة';
+          }
+
+          // صور ثالث ثانوي
+          if (classId === 12) {
+            const qiyesColIndex = columns.findIndex(c => c.key === 'qiyes_cert_img') + 1;
+            const SAATColIndex = columns.findIndex(c => c.key === 'SAAT_cert_img') + 1;
+
+            if (s.qiyes_cert_image) {
+              const buffer = await fetchImageBuffer(s.qiyes_cert_image);
+              if (buffer) {
+                const imageId = workbook.addImage({ buffer, extension: 'jpeg' });
+                worksheet.addImage(imageId, {
+                  tl: { col: qiyesColIndex - 1, row: row.number - 1 },
+                  ext: { width: 120, height: 85 }
+                });
+              } else {
+                worksheet.getCell(row.number, qiyesColIndex).value = 'لا توجد صورة';
+              }
+            } else {
+              worksheet.getCell(row.number, qiyesColIndex).value = 'لا توجد صورة';
+            }
+
+            if (s.SAAT_cert_image) {
+              const buffer = await fetchImageBuffer(s.SAAT_cert_image);
+              if (buffer) {
+                const imageId = workbook.addImage({ buffer, extension: 'jpeg' });
+                worksheet.addImage(imageId, {
+                  tl: { col: SAATColIndex - 1, row: row.number - 1 },
+                  ext: { width: 120, height: 85 }
+                });
+              } else {
+                worksheet.getCell(row.number, SAATColIndex).value = 'لا توجد صورة';
+              }
+            } else {
+              worksheet.getCell(row.number, SAATColIndex).value = 'لا توجد صورة';
+            }
+          }
+        }
       }
-      row['رقم الجوال 1'] = s.phone1 || '-';
-      row['رقم الجوال 2'] = s.phone2 || '-';
-      return row;
-    });
 
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(formatData(data));
-    ws['!dir'] = 'rtl';
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
-    XLSX.writeFile(wb, `${fileName}.xlsx`);
+      const buffer = await workbook.xlsx.writeBuffer();
+      saveAs(new Blob([buffer]), `بيانات_${className.replace(/\s+/g, '_')}.xlsx`);
+    } catch (err) {
+      alert('فشل تصدير الملف: ' + err.message);
+    } finally {
+      setExporting(false);
+    }
   };
 
-  const renderStudentTable = (title, list, classId, genderLabel) => {
+  const renderStudentTable = (title, list, classId) => {
     if (list.length === 0) return null;
-
-    const className = CLASSES.find(c => c.id === classId)?.name || '';
-    const exportFileName = `${genderLabel}_${className.replace(/\s+/g, '_')}`;
 
     return (
       <div className="gender-table-container">
         <div className="table-header">
           <h3 className="gender-table-title">{title}</h3>
-          <button
-            onClick={() => exportToExcel(list, exportFileName, genderLabel, classId)}
-            className="export-btn btn-primary"
-          >
-            تصدير Excel 📥
-          </button>
         </div>
         <div className="table-responsive">
           <table className="student-table">
@@ -162,6 +277,15 @@ const AdminDashboard = () => {
 
   return (
     <div className="admin-dashboard">
+      {exporting && (
+        <div className="export-overlay">
+          <div className="export-message">
+            <div className="spinner"></div>
+            <p>جاري تصدير الملف مع الصور...</p>
+          </div>
+        </div>
+      )}
+
       <div className="stats-grid">
         <div className="stats-card card">
           <div className="stats-icon">👥</div>
@@ -197,10 +321,16 @@ const AdminDashboard = () => {
           <div key={cls.id} className="class-section card">
             <div className="section-header">
               <h2>{cls.name}</h2>
+              <button
+                onClick={() => exportToExcel(males, females, cls.name, cls.id)}
+                className="export-btn btn-primary"
+                disabled={exporting}
+              >
+                {exporting ? 'جاري التصدير...' : 'تصدير Excel 📥'}
+              </button>
             </div>
-
-            {renderStudentTable(`طلاب ${cls.name}`, males, cls.id, 'طلاب')}
-            {renderStudentTable(`طالبات ${cls.name}`, females, cls.id, 'طالبات')}
+            {renderStudentTable(`طلاب ${cls.name}`, males, cls.id)}
+            {renderStudentTable(`طالبات ${cls.name}`, females, cls.id)}
           </div>
         );
       })}

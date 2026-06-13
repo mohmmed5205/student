@@ -24,6 +24,8 @@ const StudentForm = () => {
     phone1: '', phone2: '', address: ''
   });
   const [certImage, setCertImage] = useState(null);
+  const [qiyesCertImage, setQiyesCertImage] = useState(null);
+  const [SAATCertImage, setSAATCertImage] = useState(null);
   const [additionalImages, setAdditionalImages] = useState([null, null]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
@@ -54,6 +56,11 @@ const StudentForm = () => {
       if (formData[key]) submissionData.append(key, formData[key]);
     });
 
+    if (formData.class === '12') {
+      if (qiyesCertImage) submissionData.append('qiyes_cert_image', qiyesCertImage);
+      if (SAATCertImage) submissionData.append('SAAT_cert_image', SAATCertImage);
+    }
+
     if (certImage) submissionData.append('cert_image', certImage);
     additionalImages.forEach((img, i) => {
       if (img) submissionData.append(`additional_images[${i}]`, img);
@@ -69,6 +76,8 @@ const StudentForm = () => {
         phone1: '', phone2: '', address: ''
       });
       setCertImage(null);
+      setQiyesCertImage(null);
+      setSAATCertImage(null);
       setAdditionalImages([null, null]);
       e.target.reset();
     } catch (error) {
@@ -174,8 +183,20 @@ const StudentForm = () => {
           <div className="form-files">
             <div className="form-group">
               <label>صورة الشهادة (مطلوب)*</label>
-              <input type="file" accept="image/png, image/jpeg" onChange={(e) => handleFileChange(e)} required />
+              <input type="file" accept="image/png, image/jpeg" onChange={(e) => setCertImage(e.target.files[0])} required />
             </div>
+            {formData.class === '12' && (
+              <>
+                <div className="form-group">
+                  <label>صورة شهادة القدرات</label>
+                  <input type="file" accept="image/png, image/jpeg" onChange={(e) => setQiyesCertImage(e.target.files[0])} />
+                </div>
+                <div className="form-group">
+                  <label>صورة شهادة التحصيلي</label>
+                  <input type="file" accept="image/png, image/jpeg" onChange={(e) => setSAATCertImage(e.target.files[0])} />
+                </div>
+              </>
+            )}
             <div className="form-group">
               <label>صورة إضافية 1</label>
               <input type="file" accept="image/png, image/jpeg" onChange={(e) => handleFileChange(e, 0)} />

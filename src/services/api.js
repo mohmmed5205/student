@@ -1,5 +1,4 @@
-const BASE_URL = 'https://studentshonoringsystem-1.onrender.com/api/';
-
+const BASE_URL = '/api/';
 const getHeaders = () => {
   const token = localStorage.getItem('admin_token');
   const headers = {

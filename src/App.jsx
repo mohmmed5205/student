@@ -4,11 +4,13 @@ import Navbar from './components/Navbar/Navbar';
 import StudentForm from './pages/StudentForm/StudentForm';
 import AdminLogin from './pages/AdminLogin/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
+import WelcomeModal from './components/WelcomeModal/WelcomeModal';
 import './App.css';
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
@@ -32,6 +34,7 @@ function App() {
 
   return (
     <Router>
+      {showModal && <WelcomeModal onClose={() => setShowModal(false)} />}
       <Navbar isAdmin={isAdmin} onLogout={handleLogout} />
       <div className="container" style={{ paddingTop: '80px' }}>
         <Routes>
