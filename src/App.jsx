@@ -5,7 +5,6 @@ import StudentForm from './pages/StudentForm/StudentForm';
 import AdminLogin from './pages/AdminLogin/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
 import WelcomeModal from './components/WelcomeModal/WelcomeModal';
-import './App.css';
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -30,13 +29,17 @@ function App() {
     setIsAdmin(false);
   };
 
-  if (loading) return <div className="loading-spinner"><div className="spinner"></div></div>;
+  if (loading) return (
+    <div className="min-h-screen bg-[#e8edf2] flex items-center justify-center">
+      <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin shadow-nm"></div>
+    </div>
+  );
 
   return (
     <Router>
       {showModal && <WelcomeModal onClose={() => setShowModal(false)} />}
       <Navbar isAdmin={isAdmin} onLogout={handleLogout} />
-      <div className="container" style={{ paddingTop: '80px' }}>
+      <div className="min-h-screen bg-[#e8edf2]">
         <Routes>
           <Route path="/" element={<StudentForm />} />
           

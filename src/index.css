@@ -1,5 +1,17 @@
-/* Reset default styles */
-:root {
-  line-height: 1.5;
-  font-weight: 400;
+@import "tailwindcss";
+
+@theme {
+  --color-nm: #e8edf2;
+
+  --shadow-nm: 8px 8px 16px #c8cdd2, -8px -8px 16px #ffffff;
+  --shadow-nm-sm: 5px 5px 10px #c8cdd2, -5px -5px 10px #ffffff;
+  --shadow-nm-xs: 3px 3px 6px #c8cdd2, -3px -3px 6px #ffffff;
+  --shadow-nm-inset: inset 4px 4px 8px #c8cdd2, inset -4px -4px 8px #ffffff;
+  --shadow-nm-inset-sm: inset 3px 3px 6px #c8cdd2, inset -3px -3px 6px #ffffff;
+}
+
+body {
+  font-family: 'Cairo', sans-serif;
+  direction: rtl;
+  background-color: #e8edf2;
 }
